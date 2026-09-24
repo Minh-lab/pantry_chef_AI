@@ -1,0 +1,44 @@
+name: Flutter CI
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+
+jobs:
+  build-and-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Read FVM config
+        id: fvm-config
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const fvmConfig = JSON.parse(fs.readFileSync('.fvmrc', 'utf8'));
+            return fvmConfig.flutter;
+          result-encoding: string
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ steps.fvm-config.outputs.result }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze code
+        run: flutter analyze --fatal-infos --fatal-warnings
+
+      # Uncomment nếu dự án có Unit test
+      # - name: Run tests
+      #   run: flutter test
